@@ -1,0 +1,23 @@
+<!-- templates/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Welcome, {{ user.username }}!</h2>
+
+<h3>Your Bookings:</h3>
+{% if bookings %}
+    <ul>
+        {% for booking in bookings %}
+        <li>
+            Spot ID: {{ booking.spot_id }} | 
+            Parked At: {{ booking.parking_timestamp }} | 
+            Left At: {{ booking.leaving_timestamp or "Still Parked" }}
+        </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No bookings yet.</p>
+{% endif %}
+
+<a href="{{ url_for('logout') }}">Logout</a>
+{% endblock %}
