@@ -1,5 +1,13 @@
 import sqlite3
 
+from app import app, db
+
+with app.app_context():
+    db.create_all()
+    print("✅ Tables created successfully!")
+
+
+
 # Connect to the SQLite database (creates it if it doesn't exist)
 conn = sqlite3.connect('parking_app.db')
 c = conn.cursor()

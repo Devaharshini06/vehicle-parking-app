@@ -31,6 +31,16 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # -------------------------
+# BOOKING MODEL
+# -------------------------
+class Booking(db.Model):
+    __tablename__ = 'bookings'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    spot_id = db.Column(db.Integer, nullable=False)
+    parking_timestamp = db.Column(db.DateTime, nullable=False)
+
+# -------------------------
 # ROUTES (Coming soon)
 # -------------------------
 @app.route('/')
@@ -71,13 +81,16 @@ def login():
 
         if user and check_password_hash(user.password, password):
             login_user(user)
+            session['user_id'] = user.id  # Add this line 👈
             flash("Login successful!", "success")
-            return redirect(url_for('user_dashboard'))  # We’ll define this later
+            return redirect(url_for('dashboard'))  # or 'dashboard' if that's the route
+ # We’ll define this later
         else:
             flash("Invalid credentials", "danger")
             return redirect(url_for('login'))
 
     return render_template('login.html')
+    
 
 
 @app.route('/logout')
@@ -98,9 +111,46 @@ def dashboard():
 
     return render_template('dashboard.html', user=user, bookings=bookings)
 
+def get_db_connection():
+    import sqlite3
+    conn = sqlite3.connect('parking_app.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.route('/book', methods=['GET', 'POST'])
+@login_required
+def book_spot():
+    if request.method == 'POST':
+        lot_id = request.form['lot_id']
+        conn = get_db_connection()
+
+        spot = conn.execute("SELECT * FROM spots WHERE lot_id = ? AND status = 'A' LIMIT 1", (lot_id,)).fetchone()
+
+        if spot:
+            conn.execute("UPDATE spots SET status = 'O' WHERE id = ?", (spot['id'],))
+            conn.execute("""
+                INSERT INTO bookings (user_id, spot_id, parking_timestamp)
+                VALUES (?, ?, datetime('now'))
+            """, (current_user.id, spot['id']))
+            conn.commit()
+            flash('Spot successfully booked!', 'success')
+        else:
+            flash('No available spots in this lot.', 'danger')
+
+        conn.close()
+        return redirect(url_for('dashboard'))
+
+    return render_template('book.html')  # GET request → show form
+
+
+
+
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
+
 
 
 
